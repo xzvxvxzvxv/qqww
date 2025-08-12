@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>身份证打印</title>
+  <style>
+    /* 更新通知弹窗样式 */
+    .update-notification {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .notification-content {
+      background-color: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+      width: 90%;
+      max-width: 500px;
+      position: relative;
+    }
+    
+    .notification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .notification-title {
+      margin: 0;
+      color: #333;
+      font-size: 1.2rem;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #666;
+      transition: color 0.3s;
+    }
+    
+    .close-btn:hover {
+      color: #333;
+    }
+    
+    .notification-body {
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    
+    .notification-footer {
+      text-align: right;
+    }
+    
+    .confirm-btn {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .confirm-btn:hover {
+      background-color: #45a049;
+    }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+      background: #f0f0f0;
+    }
+
+    .upload-area {
+      margin-bottom: 20px;
+    }
+
+    .upload-area input {
+      margin: 10px;
+    }
+
+    .id-card {
+      width: 300px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    .household-book {
+      width: 450px; /* 比身份证大50% */
+      margin: 20px auto;
+      background: #fff;
+      padding: 15px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    .household-book img {
+      width: 100%;
+      display: block;
+      margin: 0 auto;
+    }
+
+    @media print {
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      .actions, .upload-area {
+        display: none !important;
+      }
+      .id-card {
+        margin: auto;
+        box-shadow: none;
+      }
+      body.print-black .id-card img,
+      body.print-black .household-book img {
+        filter: grayscale(100%);
+      }
+
+      .household-book {
+        margin: auto;
+        box-shadow: none;
+        width: 80%; /* 打印时占页面宽度的80% */
+      }
+    }
+
+    .id-card img {
+      width: 100%;
+      display: block;
+      margin: 10px auto;
+    }
+
+    .actions {
+      margin-top: 20px;
+    }
+
+    .actions button {
+      background-color: #4CAF50; /* 绿色背景 */
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px 2px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background-color 0.3s ease, transform 0.1s ease;
+    }
+
+    .actions button:hover {
+      background-color: #45a049; /* 深绿色背景 */
+    }
+
+    .actions button:active {
+      background-color: #3e8e41;
+      transform: translateY(2px);
+    }
+
+    @media print {
+      .actions, .upload-area {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="upload-area">
+    <label>证件类型: </label>
+    <label><input type="radio" name="idType" value="idCard" checked> 身份证</label>
+    <label><input type="radio" name="idType" value="bankCard"> 银行卡</label>
+    <label><input type="radio" name="idType" value="householdBook"> 户口簿</label><br><br>
+
+    <div id="idCardUploads">
+      <label>上传正面照片: <input type="file" id="frontUpload" accept="image/*"></label><br>
+      <label>上传反面照片: <input type="file" id="backUpload" accept="image/*"></label><br><br>
+    </div>
+
+    <div id="bankCardUploads" style="display: none;">
+      <label>上传银行卡照片: <input type="file" id="bankCardUpload" accept="image/*"></label><br><br>
+    </div>
+
+    <div id="householdBookUploads" style="display: none;">
+      <label>上传户口簿照片: <input type="file" id="householdBookUpload" accept="image/*"></label><br><br>
+    </div>
+
+    <label>打印颜色: </label>
+    <label><input type="radio" name="printColor" value="color" checked> 彩色</label>
+    <label><input type="radio" name="printColor" value="black"> 黑色</label>
+  </div>
+
+  <div id="idCard" class="id-card" style="display: block;">
+    <img id="frontImage" src="" alt="正面身份证">
+    <img id="backImage" src="" alt="反面身份证">
+  </div>
+
+  <div id="bankCard" class="id-card" style="display: none;">
+    <img id="bankCardImage" src="" alt="银行卡">
+  </div>
+
+  <div id="householdBook" class="household-book" style="display: none;">
+    <img id="householdBookImage" src="" alt="户口簿">
+  </div>
+
+  <div class="actions">
+    <button onclick="printPage()">打印</button>
+    <button onclick="downloadPDF()">输出 PDF</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <script>
+    // 显示上传的图片
+    // 证件类型切换
+    const idTypeRadios = document.querySelectorAll('input[name="idType"]');
+    idTypeRadios.forEach(radio => {
+      radio.addEventListener('change', function() {
+        if (this.value === 'idCard') {
+          document.getElementById('idCardUploads').style.display = 'block';
+          document.getElementById('bankCardUploads').style.display = 'none';
+          document.getElementById('householdBookUploads').style.display = 'none';
+          document.getElementById('idCard').style.display = 'block';
+          document.getElementById('bankCard').style.display = 'none';
+          document.getElementById('householdBook').style.display = 'none';
+        } else if (this.value === 'bankCard') {
+          document.getElementById('idCardUploads').style.display = 'none';
+          document.getElementById('bankCardUploads').style.display = 'block';
+          document.getElementById('householdBookUploads').style.display = 'none';
+          document.getElementById('idCard').style.display = 'none';
+          document.getElementById('bankCard').style.display = 'block';
+          document.getElementById('householdBook').style.display = 'none';
+        } else {
+          document.getElementById('idCardUploads').style.display = 'none';
+          document.getElementById('bankCardUploads').style.display = 'none';
+          document.getElementById('householdBookUploads').style.display = 'block';
+          document.getElementById('idCard').style.display = 'none';
+          document.getElementById('bankCard').style.display = 'none';
+          document.getElementById('householdBook').style.display = 'block';
+        }
+      });
+    });
+
+    // 身份证图片上传
+    document.getElementById('frontUpload').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => document.getElementById('frontImage').src = reader.result;
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.getElementById('backUpload').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => document.getElementById('backImage').src = reader.result;
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 银行卡图片上传
+    document.getElementById('bankCardUpload').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => document.getElementById('bankCardImage').src = reader.result;
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 户口簿图片上传
+    document.getElementById('householdBookUpload').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => document.getElementById('householdBookImage').src = reader.result;
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 打印
+    function printPage() {
+      // 检查用户选择的打印颜色
+      const colorOption = document.querySelector('input[name="printColor"]:checked').value;
+      const idType = document.querySelector('input[name="idType"]:checked').value;
+      
+      // 根据选择应用不同的样式
+      if (colorOption === 'black') {
+        document.body.classList.add('print-black');
+      } else {
+        document.body.classList.remove('print-black');
+      }
+      
+      // 执行打印
+      window.print();
+    }
+
+    // 下载 PDF
+    function downloadPDF() {
+      const element = document.getElementById('idCard');
+      const opt = {
+        margin:       0.5,
+        filename:     '身份证打印.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+  </script>
+<!-- 更新通知弹窗 -->
+  <div id="updateNotification" class="update-notification">
+    <div class="notification-content">
+      <div class="notification-header">
+        <h3 class="notification-title">功能更新通知</h3>
+        <button class="close-btn" onclick="closeNotification()">&times;</button>
+      </div>
+      <div class="notification-body">
+        <p>亲爱的用户，我们很高兴地宣布，户口簿功能已完成以下更新：</p>
+        <ul>
+          <li>优化了户口簿图片的显示效果</li>
+          <li>改进了打印适配，确保户口簿打印更加清晰</li>
+          <li>增加了对不同尺寸户口簿的兼容性</li>
+        </ul>
+        <p>感谢您使用我们的证件打印服务！</p>
+      </div>
+      <div class="notification-footer">
+        <button class="confirm-btn" onclick="closeNotification()">我知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 关闭通知弹窗
+    function closeNotification() {
+      document.getElementById('updateNotification').style.display = 'none';
+      // 可选：使用localStorage记录用户已关闭弹窗
+      localStorage.setItem('updateNotificationSeen', 'true');
+    }
+
+    // 页面加载完成后检查是否显示弹窗
+    document.addEventListener('DOMContentLoaded', function() {
+      // 可选：检查用户是否已经关闭过弹窗
+      const hasSeenNotification = localStorage.getItem('updateNotificationSeen');
+      if (!hasSeenNotification) {
+        document.getElementById('updateNotification').style.display = 'flex';
+      }
+    });
+  </script>
+</body>
+</html>
